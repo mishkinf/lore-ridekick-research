@@ -52,12 +52,43 @@ export interface LoreEvent {
 
 export type EventHandler = (event: LoreEvent, context: ExtensionToolContext) => void | Promise<void>;
 
+// Command types
+export interface ExtensionCommandContext {
+  defaultDataDir: string;
+  logger?: (message: string) => void;
+}
+
+export interface ExtensionCommand {
+  name: string;
+  description?: string;
+  register: (program: unknown, context: ExtensionCommandContext) => void | Promise<void>;
+}
+
+// Hook types
+export interface SourceCreatedEvent {
+  id: string;
+  title: string;
+  source_type: string;
+  projects: string[];
+}
+
+export interface ResearchPackage {
+  question: string;
+  answer: string;
+  sources: unknown[];
+}
+
+export interface ExtensionHooks {
+  onSourceCreated?: (event: SourceCreatedEvent, context: ExtensionToolContext) => void | Promise<void>;
+  onResearchCompleted?: (result: ResearchPackage, context: ExtensionToolContext) => void | Promise<void>;
+}
+
 export interface LoreExtension {
   name: string;
   version: string;
   tools?: ExtensionTool[];
-  commands?: unknown[];
-  hooks?: Record<string, unknown>;
+  commands?: ExtensionCommand[];
+  hooks?: ExtensionHooks;
   components?: unknown[];
   middleware?: ExtensionMiddleware[];
   events?: { [K in LoreEventType]?: EventHandler };

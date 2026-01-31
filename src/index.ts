@@ -7,7 +7,7 @@
  * - Pain point tracking: aggregate pain points with frequency
  */
 
-import type { LoreExtension, ExtensionToolContext } from './types.js';
+import type { LoreExtension, ExtensionToolContext, ExtensionCommand, ExtensionHooks } from './types.js';
 
 // ============================================================================
 // Helpers
@@ -379,6 +379,62 @@ const painPointsTool = {
 // Extension Export
 // ============================================================================
 
+// ============================================================================
+// CLI Commands
+// ============================================================================
+
+const ridekickCommand: ExtensionCommand = {
+  name: 'ridekick',
+  description: 'Ridekick research shortcuts',
+  register: (program: any, context) => {
+    const cmd = program
+      .command('ridekick')
+      .description('Ridekick user research commands');
+    
+    cmd
+      .command('status')
+      .description('Show Ridekick research status')
+      .action(async () => {
+        console.log('📊 Ridekick Research Status');
+        console.log('─'.repeat(40));
+        console.log('Extension: lore-ridekick-research v0.1.0');
+        console.log('Tools: ridekick_speakers, ridekick_hypothesis, ridekick_pain_points');
+        console.log('Middleware: ridekick-logger (active)');
+        console.log('Hooks: onSourceCreated, onResearchCompleted');
+      });
+    
+    cmd
+      .command('summary')
+      .description('Quick pain points summary')
+      .action(async () => {
+        console.log('💡 Run: lore tool call ridekick_pain_points');
+        console.log('   or use lore browse → Tools → ridekick_pain_points');
+      });
+  },
+};
+
+// ============================================================================
+// Hooks
+// ============================================================================
+
+const ridekickHooks: ExtensionHooks = {
+  onSourceCreated: async (event, context) => {
+    // Only log for ridekick project sources
+    if (event.projects?.includes('ridekick')) {
+      const log = context.logger || console.error;
+      log(`[ridekick] 📄 New source added to Ridekick: ${event.title}`);
+    }
+  },
+  onResearchCompleted: async (result, context) => {
+    const log = context.logger || console.error;
+    log(`[ridekick] 🔬 Research completed: ${result.question.slice(0, 50)}...`);
+  },
+};
+
+// ============================================================================
+// Extension Definition
+// ============================================================================
+
 const extension: LoreExtension = {
   name: 'lore-ridekick-research',
   version: '0.1.0',
@@ -388,6 +444,12 @@ const extension: LoreExtension = {
     hypothesisTool,
     painPointsTool,
   ],
+  
+  // CLI commands: lore ridekick status, lore ridekick summary
+  commands: [ridekickCommand],
+  
+  // Hooks: react to source creation and research completion
+  hooks: ridekickHooks,
   
   // Middleware: intercept tool calls
   middleware: [
