@@ -283,6 +283,63 @@ const hypothesisTool = {
   },
 };
 
+// Simple test tool to verify extension architecture works
+const pingTool = {
+  definition: {
+    name: 'ridekick_ping',
+    description: 'Test tool to verify the extension system is working. Returns sample data.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Optional message to echo back',
+          default: 'pong',
+        },
+        delay_ms: {
+          type: 'number',
+          description: 'Simulate a slow operation (milliseconds)',
+          default: 0,
+        },
+        simulate_error: {
+          type: 'boolean',
+          description: 'Simulate an error for testing',
+          default: false,
+        },
+      },
+    },
+  },
+  handler: async (args: Record<string, unknown>, context: ExtensionToolContext) => {
+    const message = (args.message as string) || 'pong';
+    const delayMs = (args.delay_ms as number) || 0;
+    const simulateError = (args.simulate_error as boolean) || false;
+    
+    // Simulate delay if requested
+    if (delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    
+    // Simulate error if requested
+    if (simulateError) {
+      throw new Error('Simulated error for testing');
+    }
+    
+    return {
+      status: 'ok',
+      message,
+      timestamp: new Date().toISOString(),
+      extension: 'lore-ridekick-research',
+      version: '0.1.0',
+      features_tested: [
+        'Tool execution',
+        'Argument parsing',
+        'Return value serialization',
+        delayMs > 0 ? `Async delay (${delayMs}ms)` : null,
+      ].filter(Boolean),
+    };
+  },
+};
+
 const painPointsTool = {
   definition: {
     name: 'ridekick_pain_points',
@@ -440,6 +497,7 @@ const extension: LoreExtension = {
   version: '0.1.0',
   
   tools: [
+    pingTool,  // Test tool first - for verifying architecture
     speakersTool,
     hypothesisTool,
     painPointsTool,
