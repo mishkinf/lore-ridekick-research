@@ -275,6 +275,120 @@ const pingTool = {
   },
 };
 
+// AI-powered analysis tool using Anthropic API
+const analyzeTool = {
+  definition: {
+    name: 'ridekick_analyze',
+    description: 'AI-powered analysis of Ridekick user research. Uses Claude to synthesize insights from interview data. Takes longer but provides deeper analysis.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'What do you want to analyze? e.g., "What are the main reasons users avoid car dealerships?"',
+        },
+        max_sources: {
+          type: 'number',
+          description: 'Maximum sources to include in analysis (default: 10)',
+          default: 10,
+        },
+      },
+      required: ['question'],
+    },
+  },
+  handler: async (args: Record<string, unknown>, context: ExtensionToolContext) => {
+    const question = args.question as string;
+    const maxSources = (args.max_sources as number) || 10;
+    
+    if (!question) {
+      throw new Error('question is required');
+    }
+    
+    // Get sources from lore
+    const sources = await getAllSources('ridekick', context);
+    
+    if (sources.length === 0) {
+      return {
+        status: 'error',
+        message: 'No ridekick sources found. Add some user research data first.',
+      };
+    }
+    
+    // Prepare context from sources (limit to avoid token overflow)
+    const sourcesToAnalyze = sources.slice(0, maxSources);
+    const sourceContext = sourcesToAnalyze.map((s, i) => 
+      `[Source ${i + 1}: ${s.title}]\n${s.summary || 'No summary'}`
+    ).join('\n\n');
+    
+    // Call Claude API
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return {
+        status: 'error', 
+        message: 'ANTHROPIC_API_KEY not set. Cannot perform AI analysis.',
+        sources_available: sources.length,
+      };
+    }
+    
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: `You are analyzing user research data for Ridekick, a car buying service app.
+
+Based on the following user research sources, answer this question:
+${question}
+
+USER RESEARCH SOURCES:
+${sourceContext}
+
+Provide a clear, actionable analysis. Include:
+1. Key findings (bullet points)
+2. Supporting evidence from the sources
+3. Recommendations (if applicable)
+
+Be concise but thorough.`
+          }],
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        return {
+          status: 'error',
+          message: `Claude API error: ${response.status}`,
+          details: error,
+        };
+      }
+      
+      const data = await response.json() as { content: Array<{ text: string }> };
+      const analysis = data.content?.[0]?.text || 'No response from Claude';
+      
+      return {
+        status: 'ok',
+        question,
+        analysis,
+        sources_analyzed: sourcesToAnalyze.length,
+        source_titles: sourcesToAnalyze.map(s => s.title),
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+};
+
 const painPointsTool = {
   definition: {
     name: 'ridekick_pain_points',
@@ -433,6 +547,7 @@ const extension: LoreExtension = {
   
   tools: [
     pingTool,  // Test tool first - for verifying architecture
+    analyzeTool,  // AI-powered analysis using Claude
     speakersTool,
     hypothesisTool,
     painPointsTool,
