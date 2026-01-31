@@ -26,6 +26,35 @@ export interface ExtensionQueryResult {
   score?: number;
 }
 
+// Proposal types
+export interface ProposedChange {
+  type: 'create_source' | 'update_source' | 'delete_source' | 'retain_insight' | 'add_tags';
+  title?: string;
+  content?: string;
+  project?: string;
+  sourceId?: string;
+  changes?: Record<string, unknown>;
+  insight?: string;
+  tags?: string[];
+  reason: string;
+}
+
+export interface PendingProposal {
+  id: string;
+  extensionName: string;
+  change: ProposedChange;
+  createdAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+// Permission types
+export interface ExtensionPermissions {
+  read?: boolean;
+  proposeCreate?: boolean;
+  proposeModify?: boolean;
+  proposeDelete?: boolean;
+}
+
 export interface ExtensionToolContext {
   mode: 'mcp' | 'cli';
   dataDir?: string;
@@ -33,6 +62,8 @@ export interface ExtensionToolContext {
   logger?: (message: string) => void;
   // Query lore's database (use this instead of direct DB access)
   query?: (options: ExtensionQueryOptions) => Promise<ExtensionQueryResult[]>;
+  // Propose changes that require user approval
+  propose?: (change: ProposedChange) => Promise<PendingProposal>;
 }
 
 export type ExtensionToolHandler = (
@@ -106,6 +137,7 @@ export interface ExtensionHooks {
 export interface LoreExtension {
   name: string;
   version: string;
+  permissions?: ExtensionPermissions;
   tools?: ExtensionTool[];
   commands?: ExtensionCommand[];
   hooks?: ExtensionHooks;
