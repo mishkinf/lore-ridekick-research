@@ -395,33 +395,34 @@ const extension: LoreExtension = {
       name: 'ridekick-logger',
       beforeToolCall: async (toolName, args, context) => {
         if (toolName.startsWith('ridekick_')) {
-          console.error(`[ridekick] 🔍 Calling ${toolName} with:`, JSON.stringify(args));
+          // Use context.logger if available (TUI-safe), otherwise skip in CLI mode
+          const log = context.logger || (() => {});
+          log(`[ridekick] 🔍 Calling ${toolName}`);
         }
         return { args }; // pass through unchanged
       },
       afterToolCall: async (toolName, args, result, context) => {
         if (toolName.startsWith('ridekick_')) {
+          const log = context.logger || (() => {});
           const summary = typeof result === 'object' && result !== null
             ? Object.keys(result).join(', ')
             : typeof result;
-          console.error(`[ridekick] ✅ ${toolName} returned: ${summary}`);
+          log(`[ridekick] ✅ ${toolName} completed`);
         }
         return result; // pass through unchanged
       },
     },
   ],
   
-  // Events: react to system events
+  // Events: react to system events (use context.logger for TUI-safe logging)
   events: {
-    'tool.call': (event, context) => {
-      // Log all tool calls (not just ridekick ones)
-      // console.error(`[ridekick-events] Tool called:`, event.payload);
-    },
     'search': (event, context) => {
-      console.error(`[ridekick-events] 🔎 Search performed:`, JSON.stringify(event.payload));
+      const log = context.logger || (() => {});
+      log(`[ridekick] 🔎 Search performed`);
     },
     'ingest': (event, context) => {
-      console.error(`[ridekick-events] 📥 Document ingested:`, JSON.stringify(event.payload));
+      const log = context.logger || (() => {});
+      log(`[ridekick] 📥 Document ingested`);
     },
   },
 };
