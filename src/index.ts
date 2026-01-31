@@ -388,6 +388,42 @@ const extension: LoreExtension = {
     hypothesisTool,
     painPointsTool,
   ],
+  
+  // Middleware: intercept tool calls
+  middleware: [
+    {
+      name: 'ridekick-logger',
+      beforeToolCall: async (toolName, args, context) => {
+        if (toolName.startsWith('ridekick_')) {
+          console.error(`[ridekick] 🔍 Calling ${toolName} with:`, JSON.stringify(args));
+        }
+        return { args }; // pass through unchanged
+      },
+      afterToolCall: async (toolName, args, result, context) => {
+        if (toolName.startsWith('ridekick_')) {
+          const summary = typeof result === 'object' && result !== null
+            ? Object.keys(result).join(', ')
+            : typeof result;
+          console.error(`[ridekick] ✅ ${toolName} returned: ${summary}`);
+        }
+        return result; // pass through unchanged
+      },
+    },
+  ],
+  
+  // Events: react to system events
+  events: {
+    'tool.call': (event, context) => {
+      // Log all tool calls (not just ridekick ones)
+      // console.error(`[ridekick-events] Tool called:`, event.payload);
+    },
+    'search': (event, context) => {
+      console.error(`[ridekick-events] 🔎 Search performed:`, JSON.stringify(event.payload));
+    },
+    'ingest': (event, context) => {
+      console.error(`[ridekick-events] 📥 Document ingested:`, JSON.stringify(event.payload));
+    },
+  },
 };
 
 export default extension;
