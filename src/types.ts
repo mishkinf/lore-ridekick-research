@@ -8,11 +8,31 @@ export interface ToolDefinition {
   inputSchema: Record<string, unknown>;
 }
 
+export interface ExtensionQueryOptions {
+  query?: string;
+  project?: string;
+  limit?: number;
+  sourceType?: string;
+}
+
+export interface ExtensionQueryResult {
+  id: string;
+  title: string;
+  summary: string;
+  content?: string;
+  projects: string[];
+  participants?: string[];
+  created_at: string;
+  score?: number;
+}
+
 export interface ExtensionToolContext {
   mode: 'mcp' | 'cli';
   dataDir?: string;
   dbPath?: string;
   logger?: (message: string) => void;
+  // Query lore's database (use this instead of direct DB access)
+  query?: (options: ExtensionQueryOptions) => Promise<ExtensionQueryResult[]>;
 }
 
 export type ExtensionToolHandler = (

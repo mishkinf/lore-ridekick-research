@@ -13,93 +13,28 @@ import type { LoreExtension, ExtensionToolContext, ExtensionCommand, ExtensionHo
 // Helpers
 // ============================================================================
 
-async function querySupabase(
-  sql: string,
-  context: ExtensionToolContext
-): Promise<unknown[]> {
-  // In a real implementation, we'd use the Supabase client
-  // For now, we'll use the REST API with env vars
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/query`, {
-    method: 'POST',
-    headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ sql }),
-  });
-
-  if (!response.ok) {
-    // Fallback: try direct table query for sources
-    return [];
-  }
-
-  return response.json();
-}
-
-async function searchSources(
-  query: string,
-  project: string = 'ridekick',
-  context: ExtensionToolContext
-): Promise<Array<{ id: string; title: string; summary: string; participants: string[]; created_at: string }>> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
-  }
-
-  // Simple text search on sources table
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/sources?select=id,title,summary,participants,created_at&projects=cs.{${project}}&or=(title.ilike.*${encodeURIComponent(query)}*,summary.ilike.*${encodeURIComponent(query)}*)&order=created_at.desc&limit=20`,
-    {
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    return [];
-  }
-
-  return response.json();
+interface SourceResult {
+  id: string;
+  title: string;
+  summary: string;
+  participants?: string[];
+  content?: string;
+  created_at: string;
+  projects: string[];
 }
 
 async function getAllSources(
   project: string = 'ridekick',
   context: ExtensionToolContext
-): Promise<Array<{ id: string; title: string; summary: string; participants: string[]; content: string; created_at: string }>> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
-  }
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/sources?select=id,title,summary,participants,content,created_at&projects=cs.{${project}}&order=created_at.desc`,
-    {
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
+): Promise<SourceResult[]> {
+  // Use lore's query function from context (no direct DB access needed)
+  if (!context.query) {
+    console.error('[ridekick] context.query not available - is this an older lore version?');
     return [];
   }
-
-  return response.json();
+  
+  const results = await context.query({ project, limit: 200 });
+  return results as SourceResult[];
 }
 
 // ============================================================================
