@@ -1,0 +1,30 @@
+{
+  "name": "lore-ridekick-research",
+  "version": "0.1.0",
+  "description": "Lore extension for Ridekick user research - speaker profiles, hypothesis testing, pain point tracking",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "lore",
+    "lore-extension",
+    "user-research",
+    "ridekick"
+  ],
+  "author": "Mishkin Faustini",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "lore": ">=0.1.0"
+  }
+}
